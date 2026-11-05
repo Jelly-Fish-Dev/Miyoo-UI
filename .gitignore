@@ -1,0 +1,15 @@
+# Per-machine make settings (device IP)
+local.mk
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# C / device build
+build/
+dist/
+*.o
+*.d
+log.txt
