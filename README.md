@@ -21,6 +21,38 @@ The shared UI code for native [OnionOS](https://github.com/OnionUI/Onion) apps o
 
 Apps add their own layout and colours in their own `ui/theme.h`, which includes `mui/theme.h` first.
 
+## Demo
+
+`demo/` is a small OnionOS app that shows each part of the library on its own page:
+
+1. **Hello world**: font sizes, `gfx_font()`, the three alignments, truncation with `...`
+2. **Colours**: the theme colours with `color_text_on` labels, and `color_mix` gradients
+3. **Images**: the Lenna test image (`demo/res/images/lenna.png`) loaded with `image_load_fit` into three box sizes
+4. **Rotation**: an upright panel next to a `gfx_rotate180` one, `gfx_text_rot180`, `gfx_digits_centered_on`
+5. **Input**: the last button pressed and a press count for every button
+
+**L1/L2** go to the previous page, **R1/R2** to the next, **MENU** exits.
+
+Screenshots from a Miyoo Mini Plus:
+
+| | |
+|---|---|
+| ![1. Hello world](demo/screenshots/1.png) | ![2. Colours](demo/screenshots/2.png) |
+| 1. Hello world | 2. Colours |
+| ![3. Images](demo/screenshots/3.png) | ![4. Rotation](demo/screenshots/4.png) |
+| 3. Images | 4. Rotation |
+| ![5. Input](demo/screenshots/5.png) | |
+| 5. Input | |
+
+```sh
+cd demo
+make            # cross-compile in Docker and stage dist/App/MiyooUIDemo
+make zip        # dist/MiyooUIDemo.zip, unzip onto the SD card root
+make deploy HOST=<device ip>
+```
+
+The demo builds against the library in the folder above it, using Onion's `aemiii91/miyoomini-toolchain` image directly.
+
 ## Using it from an app
 
 Clone Miyoo-UI next to the app (`../Miyoo-UI`). In the app's Makefile:

@@ -1,0 +1,6 @@
+{
+    "label": "Miyoo-UI Demo",
+    "icon": "icon.png",
+    "launch": "launch.sh",
+    "description": "Demo of the Miyoo-UI library"
+}
