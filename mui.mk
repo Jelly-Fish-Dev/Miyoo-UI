@@ -7,7 +7,7 @@
 #   $(BUILD_DIR)/$(TARGET): $(OBJS) $(MUI_LIB)   # link $(MUI_LIB) after the app objects
 #
 # Provides:
-#   MUI_CFLAGS  include path, so apps write #include "mui/gfx.h"
+#   MUI_CFLAGS  include paths, so apps write #include "mui/gfx.h" (and "cJSON.h")
 #   MUI_LIB     static library, built from src/mui/*.c with the app's CFLAGS.
 #               Only the modules an app uses get linked in, so an app that never
 #               calls image_* doesn't need -lSDL_image.
@@ -18,15 +18,16 @@
 MUI_SRC_DIR := $(MUI_DIR)/src
 MUI_SRCS    := $(wildcard $(MUI_SRC_DIR)/mui/*.c)
 MUI_OBJS    := $(patsubst $(MUI_SRC_DIR)/mui/%.c,$(BUILD_DIR)/mui/%.o,$(MUI_SRCS))
+MUI_CJSON   := $(BUILD_DIR)/mui/cJSON.o
 MUI_LIB     := $(BUILD_DIR)/mui/libmui.a
-MUI_CFLAGS  := -I$(MUI_SRC_DIR)
+MUI_CFLAGS  := -I$(MUI_SRC_DIR) -I$(MUI_DIR)/third_party/cjson
 MUI_FONTS   := $(MUI_DIR)/res/fonts
 
 ifeq ($(MUI_SRCS),)
 $(error Miyoo-UI not found at MUI_DIR=$(MUI_DIR))
 endif
 
-$(MUI_LIB): $(MUI_OBJS)
+$(MUI_LIB): $(MUI_OBJS) $(MUI_CJSON)
 	rm -f $@
 	$(AR) rcs $@ $^
 
@@ -34,4 +35,9 @@ $(BUILD_DIR)/mui/%.o: $(MUI_SRC_DIR)/mui/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(MUI_CFLAGS) -c -o $@ $<
 
--include $(MUI_OBJS:.o=.d)
+# Vendored cJSON (MIT, third_party/cjson), used by mui/onion.c; apps may use it too.
+$(MUI_CJSON): $(MUI_DIR)/third_party/cjson/cJSON.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -w -c -o $@ $<
+
+-include $(MUI_OBJS:.o=.d) $(MUI_CJSON:.o=.d)

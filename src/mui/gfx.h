@@ -6,6 +6,8 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 
+#include "mui/theme.h"
+
 /* Display, fonts and drawing primitives. Screens draw into gfx->screen (or
  * into an off-screen surface from gfx_new_surface) and call gfx_present()
  * when a frame is done.
@@ -19,26 +21,41 @@ typedef struct {
     TTF_Font *font;
 } GfxFont;
 
+/* Pixel sizes of the three standard fonts. */
+typedef struct {
+    int big, normal, small;
+} GfxFontSizes;
+
+/* FONT_SIZE_BIG / FONT_SIZE / FONT_SIZE_SMALL from mui/theme.h */
+#define GFX_FONT_SIZES_DEFAULT {FONT_SIZE_BIG, FONT_SIZE, FONT_SIZE_SMALL}
+
 typedef struct {
     SDL_Surface *video;  /* real display surface */
     SDL_Surface *screen; /* off-screen buffer screens draw into */
-    TTF_Font *font_big;   /* FONT_SIZE_BIG */
-    TTF_Font *font;       /* FONT_SIZE */
-    TTF_Font *font_small; /* FONT_SIZE_SMALL */
+    TTF_Font *font_big;   /* sizes.big */
+    TTF_Font *font;       /* sizes.normal */
+    TTF_Font *font_small; /* sizes.small */
+    GfxFontSizes sizes;
     GfxFont extra[GFX_MAX_FONTS]; /* other sizes, opened by gfx_font() */
     int extra_count;
+    char font_path[512]; /* text font in use: FONT_PATH or the one given to gfx_init_font */
 } Gfx;
 
 typedef enum { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT } TextAlign;
 
-/* Opens the 640x480 display and loads the three standard fonts.
+/* Opens the 640x480 display and loads the three standard fonts from FONT_PATH.
  * On failure, call gfx_quit(). */
 bool gfx_init(Gfx *gfx);
+
+/* Same, with another text font (e.g. the Onion theme's, see mui/onion.h) and/or
+ * other sizes. font_path NULL, "" or a font that won't open falls back to
+ * FONT_PATH; sizes NULL means GFX_FONT_SIZES_DEFAULT. */
+bool gfx_init_font(Gfx *gfx, const char *font_path, const GfxFontSizes *sizes);
 void gfx_quit(Gfx *gfx);
 
 void gfx_present(Gfx *gfx);
 
-/* FONT_PATH at any pixel size. Opened on first use and kept until gfx_quit().
+/* The text font (gfx->font_path) at any pixel size. Opened on first use and kept until gfx_quit().
  * Returns NULL if the font can't be opened or GFX_MAX_FONTS sizes are open. */
 TTF_Font *gfx_font(Gfx *gfx, int size);
 
@@ -67,6 +84,21 @@ void gfx_text_on(SDL_Surface *dst, TTF_Font *font, const char *text, int x, int 
                  SDL_Color color, int max_w, TextAlign align);
 void gfx_text(Gfx *gfx, TTF_Font *font, const char *text, int x, int y, SDL_Color color,
               int max_w, TextAlign align);
+
+/* Copies at most max_chars UTF-8 characters of text into out (no "..."). */
+void gfx_utf8_prefix(const char *text, int max_chars, char *out, size_t n);
+
+/* Draws text in a box w wide at x, top at y. Text that fits is placed by align
+ * (left / centred / right in the box). Wider
+ * text scrolls (a marquee): it waits GFX_SCROLL_PAUSE_MS, scrolls left at
+ * GFX_SCROLL_SPEED px/s until its end shows, waits again, then starts over.
+ * t_ms is the time since the text started scrolling (e.g. since it was
+ * selected). Returns true while the text is scrolling, so the caller keeps
+ * redrawing. */
+#define GFX_SCROLL_PAUSE_MS 1000
+#define GFX_SCROLL_SPEED    40
+bool gfx_text_scroll(Gfx *gfx, TTF_Font *font, const char *text, int x, int y, int w,
+                     SDL_Color color, TextAlign align, Uint32 t_ms);
 
 /* Draws text rotated 180 degrees on gfx->screen, centred on x, with the
  * rotated text's top edge at y (for a reader across the table). */

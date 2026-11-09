@@ -7,9 +7,34 @@
 #include "mui/log.h"
 #include "mui/theme.h"
 
+/* Opens the three standard sizes of path into gfx. */
+static bool open_fonts(Gfx *gfx, const char *path)
+{
+    gfx->font_big = TTF_OpenFont(path, gfx->sizes.big);
+    gfx->font = TTF_OpenFont(path, gfx->sizes.normal);
+    gfx->font_small = TTF_OpenFont(path, gfx->sizes.small);
+    if (gfx->font_big && gfx->font && gfx->font_small) {
+        snprintf(gfx->font_path, sizeof gfx->font_path, "%s", path);
+        return true;
+    }
+    LOG_ERROR("TTF_OpenFont(%s) failed: %s", path, TTF_GetError());
+    TTF_Font *fonts[] = {gfx->font_big, gfx->font, gfx->font_small};
+    for (size_t i = 0; i < sizeof fonts / sizeof fonts[0]; i++)
+        if (fonts[i]) TTF_CloseFont(fonts[i]);
+    gfx->font_big = gfx->font = gfx->font_small = NULL;
+    return false;
+}
+
 bool gfx_init(Gfx *gfx)
 {
+    return gfx_init_font(gfx, NULL, NULL);
+}
+
+bool gfx_init_font(Gfx *gfx, const char *font_path, const GfxFontSizes *sizes)
+{
+    static const GfxFontSizes defaults = GFX_FONT_SIZES_DEFAULT;
     memset(gfx, 0, sizeof *gfx);
+    gfx->sizes = sizes ? *sizes : defaults;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         LOG_ERROR("SDL_Init failed: %s", SDL_GetError());
@@ -34,13 +59,11 @@ bool gfx_init(Gfx *gfx)
         LOG_ERROR("TTF_Init failed: %s", TTF_GetError());
         return false;
     }
-    gfx->font_big = TTF_OpenFont(FONT_PATH, FONT_SIZE_BIG);
-    gfx->font = TTF_OpenFont(FONT_PATH, FONT_SIZE);
-    gfx->font_small = TTF_OpenFont(FONT_PATH, FONT_SIZE_SMALL);
-    if (!gfx->font_big || !gfx->font || !gfx->font_small) {
-        LOG_ERROR("TTF_OpenFont(%s) failed: %s", FONT_PATH, TTF_GetError());
+    bool ok = font_path && font_path[0] && open_fonts(gfx, font_path);
+    if (!ok && !open_fonts(gfx, FONT_PATH))
         return false;
-    }
+    LOG_INFO("font %s (%d/%d/%d px)", gfx->font_path, gfx->sizes.big, gfx->sizes.normal,
+             gfx->sizes.small);
 
     LOG_INFO("video %dx%d %dbpp", gfx->video->w, gfx->video->h,
              gfx->video->format->BitsPerPixel);
@@ -68,9 +91,9 @@ void gfx_present(Gfx *gfx)
 
 TTF_Font *gfx_font(Gfx *gfx, int size)
 {
-    if (size == FONT_SIZE_BIG) return gfx->font_big;
-    if (size == FONT_SIZE) return gfx->font;
-    if (size == FONT_SIZE_SMALL) return gfx->font_small;
+    if (size == gfx->sizes.big) return gfx->font_big;
+    if (size == gfx->sizes.normal) return gfx->font;
+    if (size == gfx->sizes.small) return gfx->font_small;
     for (int i = 0; i < gfx->extra_count; i++)
         if (gfx->extra[i].size == size)
             return gfx->extra[i].font;
@@ -79,9 +102,9 @@ TTF_Font *gfx_font(Gfx *gfx, int size)
         LOG_ERROR("gfx_font(%d): already %d extra sizes open", size, GFX_MAX_FONTS);
         return NULL;
     }
-    TTF_Font *f = TTF_OpenFont(FONT_PATH, size);
+    TTF_Font *f = TTF_OpenFont(gfx->font_path, size);
     if (!f) {
-        LOG_ERROR("TTF_OpenFont(%s, %d) failed: %s", FONT_PATH, size, TTF_GetError());
+        LOG_ERROR("TTF_OpenFont(%s, %d) failed: %s", gfx->font_path, size, TTF_GetError());
         return NULL;
     }
     gfx->extra[gfx->extra_count].size = size;
@@ -208,6 +231,58 @@ void gfx_text(Gfx *gfx, TTF_Font *font, const char *text, int x, int y, SDL_Colo
               int max_w, TextAlign align)
 {
     gfx_text_on(gfx->screen, font, text, x, y, color, max_w, align);
+}
+
+void gfx_utf8_prefix(const char *text, int max_chars, char *out, size_t n)
+{
+    size_t i = 0;
+    int chars = 0;
+    while (text[i] && i + 1 < n) {
+        if (((unsigned char)text[i] & 0xC0) != 0x80) { /* start of a character */
+            if (chars == max_chars)
+                break;
+            chars++;
+        }
+        i++;
+    }
+    /* don't end on half a character if out was too small */
+    while (i > 0 && text[i] && ((unsigned char)text[i] & 0xC0) == 0x80)
+        i--;
+    memcpy(out, text, i);
+    out[i] = '\0';
+}
+
+bool gfx_text_scroll(Gfx *gfx, TTF_Font *font, const char *text, int x, int y, int w,
+                     SDL_Color color, TextAlign align, Uint32 t_ms)
+{
+    if (!text[0])
+        return false;
+    SDL_Surface *surf = TTF_RenderUTF8_Blended(font, text, color);
+    if (!surf) {
+        LOG_WARN("TTF_RenderUTF8_Blended failed: %s", TTF_GetError());
+        return false;
+    }
+    if (surf->w <= w) {
+        int px = align == ALIGN_CENTER ? x + (w - surf->w) / 2
+               : align == ALIGN_RIGHT  ? x + w - surf->w
+                                       : x;
+        gfx_blit(gfx, surf, px, y);
+        SDL_FreeSurface(surf);
+        return false;
+    }
+
+    Uint32 travel = (Uint32)(surf->w - w);
+    Uint32 scroll_ms = travel * 1000 / GFX_SCROLL_SPEED;
+    Uint32 p = t_ms % (GFX_SCROLL_PAUSE_MS + scroll_ms + GFX_SCROLL_PAUSE_MS);
+    Uint32 off = p < GFX_SCROLL_PAUSE_MS ? 0
+               : p < GFX_SCROLL_PAUSE_MS + scroll_ms ? (p - GFX_SCROLL_PAUSE_MS) * GFX_SCROLL_SPEED / 1000
+               : travel;
+
+    SDL_Rect src = {(Sint16)off, 0, (Uint16)w, (Uint16)surf->h};
+    SDL_Rect dst = {(Sint16)x, (Sint16)y, 0, 0};
+    SDL_BlitSurface(surf, &src, gfx->screen, &dst);
+    SDL_FreeSurface(surf);
+    return true;
 }
 
 void gfx_text_rot180(Gfx *gfx, TTF_Font *font, const char *text, int x, int y, SDL_Color color)

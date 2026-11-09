@@ -9,10 +9,11 @@ The shared UI code for native [OnionOS](https://github.com/OnionUI/Onion) apps o
 
 | Header | What it does |
 |---|---|
-| `mui/gfx.h` | 640x480 display with an off-screen buffer, the standard fonts plus `gfx_font(size)` for other sizes, fills, borders, blits, text with `...` truncation, 180° rotation and rotated text, centred digits |
+| `mui/gfx.h` | 640x480 display with an off-screen buffer, the standard fonts (`gfx_init_font()` for another font, e.g. the Onion theme's, or other sizes) plus `gfx_font(size)` for other sizes, fills, borders, blits, text with `...` truncation, scrolling (marquee) text, UTF-8 prefixes, 180° rotation and rotated text, centred digits |
 | `mui/image.h` | Load a PNG or JPG and scale it to fit a box with smooth area-averaging, e.g. Onion box art. Needs `-lSDL_image` |
 | `mui/color.h` | `color_text_on(bg)` picks readable text for a fill; `color_mix` blends two colours (for fades) |
 | `mui/glyphs.h` | Button icons in hint text: `glyph_hint(gfx, gfx->font_small, icons, "{DPAD} move   {A} pick", ...)`. Tags for the face buttons, D-pad and shoulders; also drawn upside down or into an off-screen surface. Falls back to words if the icon font is missing |
+| `mui/onion.h` | The current Onion theme: `onion_theme_font()` finds its list font the way Onion does (system.json → theme config.json → profile overrides → Onion's stock font) |
 | `mui/theme.h` | Screen size, font path and sizes, the base colours (`C_WHITE`, `C_DIM`, `C_BG`, `C_PANEL`, `C_ACCENT`, `C_DANGER`, ...) |
 | `mui/input.h` | Miyoo Mini buttons, mapped from Onion's SDL key events |
 | `mui/screen.h` | `ScreenResult`: `SCREEN_OK` / `SCREEN_DONE` / `SCREEN_EXIT` |
@@ -21,6 +22,8 @@ The shared UI code for native [OnionOS](https://github.com/OnionUI/Onion) apps o
 `res/fonts/` holds the fonts:
 - Exo 2 Bold for text (SIL OFL 1.1, see `OFL.txt`)
 - Esquire Generic Gamepad Font V2, `CL` variant, for the button icons (Apache License 2.0, see `EsquireGenericGamepdFont_LICENSE.txt`)
+
+`third_party/cjson/` is [cJSON](https://github.com/DaveGamble/cJSON) 1.7.18 (MIT), built into `libmui.a`; apps can `#include "cJSON.h"` too.
 
 Apps add their own layout and colours in their own `ui/theme.h`, which includes `mui/theme.h` first.
 
