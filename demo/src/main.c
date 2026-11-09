@@ -13,6 +13,7 @@
 
 #include "mui/color.h"
 #include "mui/gfx.h"
+#include "mui/glyphs.h"
 #include "mui/image.h"
 #include "mui/input.h"
 #include "mui/log.h"
@@ -31,6 +32,7 @@ typedef struct {
     SDL_Surface *lenna_small; /* 120x120 */
     SDL_Surface *lenna_wide;  /* fitted into a 220x90 box */
     SDL_Surface *panel;       /* off-screen buffer for the rotation page */
+    TTF_Font *glyphs;         /* button icons for the footer; NULL falls back to words */
 } Demo;
 
 /* ------------------------------------------------------------ pages */
@@ -195,8 +197,8 @@ static void render(Demo *d, Gfx *g)
 
     PAGES[d->page].render(d, g);
 
-    gfx_text(g, g->font_small, "L1/L2 previous  ·  R1/R2 next  ·  MENU exit", SCREEN_W / 2, FOOTER_Y,
-             C_DIM, SCREEN_W - 32, ALIGN_CENTER);
+    glyph_hint(g, g->font_small, d->glyphs, "{L1}{L2} previous  ·  {R1}{R2} next  ·  MENU exit",
+               SCREEN_W / 2, FOOTER_Y, C_DIM);
     gfx_present(g);
 }
 
@@ -235,6 +237,7 @@ int main(void)
     d.lenna_small = image_load_fit(LENNA_PATH, 120, 120);
     d.lenna_wide = image_load_fit(LENNA_PATH, 220, 90);
     d.panel = gfx_new_surface(&gfx, 240, 240);
+    d.glyphs = glyph_font_open(GLYPH_SIZE_SMALL);
     if (!d.lenna_big)
         LOG_WARN("couldn't load %s", LENNA_PATH);
 
@@ -260,6 +263,8 @@ int main(void)
     SDL_Surface *surfs[] = {d.lenna_big, d.lenna_small, d.lenna_wide, d.panel};
     for (size_t i = 0; i < sizeof surfs / sizeof surfs[0]; i++)
         if (surfs[i]) SDL_FreeSurface(surfs[i]);
+    if (d.glyphs)
+        TTF_CloseFont(d.glyphs);
     gfx_quit(&gfx);
     return 0;
 }

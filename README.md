@@ -12,12 +12,15 @@ The shared UI code for native [OnionOS](https://github.com/OnionUI/Onion) apps o
 | `mui/gfx.h` | 640x480 display with an off-screen buffer, the standard fonts plus `gfx_font(size)` for other sizes, fills, borders, blits, text with `...` truncation, 180° rotation and rotated text, centred digits |
 | `mui/image.h` | Load a PNG or JPG and scale it to fit a box with smooth area-averaging, e.g. Onion box art. Needs `-lSDL_image` |
 | `mui/color.h` | `color_text_on(bg)` picks readable text for a fill; `color_mix` blends two colours (for fades) |
+| `mui/glyphs.h` | Button icons in hint text: `glyph_hint(gfx, gfx->font_small, icons, "{DPAD} move   {A} pick", ...)`. Tags for the face buttons, D-pad and shoulders; also drawn upside down or into an off-screen surface. Falls back to words if the icon font is missing |
 | `mui/theme.h` | Screen size, font path and sizes, the base colours (`C_WHITE`, `C_DIM`, `C_BG`, `C_PANEL`, `C_ACCENT`, `C_DANGER`, ...) |
 | `mui/input.h` | Miyoo Mini buttons, mapped from Onion's SDL key events |
 | `mui/screen.h` | `ScreenResult`: `SCREEN_OK` / `SCREEN_DONE` / `SCREEN_EXIT` |
 | `mui/log.h` | `LOG_INFO` / `LOG_WARN` / `LOG_ERROR` to stderr; `LOG_DEBUG` only in debug builds |
 
-`res/fonts/` holds the font the theme uses: Exo 2 Bold, SIL OFL 1.1.
+`res/fonts/` holds the fonts:
+- Exo 2 Bold for text (SIL OFL 1.1, see `OFL.txt`)
+- Esquire Generic Gamepad Font V2, `CL` variant, for the button icons (Apache License 2.0, see `EsquireGenericGamepdFont_LICENSE.txt`)
 
 Apps add their own layout and colours in their own `ui/theme.h`, which includes `mui/theme.h` first.
 
@@ -81,4 +84,4 @@ The library is compiled with the app's own `CFLAGS` into `build/<variant>/mui/li
 
 ## License
 
-[MIT](LICENSE) © 2026 Jelly-Fish-Dev. The Exo 2 font keeps its own license (SIL OFL 1.1, see `res/fonts/OFL.txt`).
+[MIT](LICENSE) © 2026 Jelly-Fish-Dev. The fonts keep their own licenses: Exo 2 under SIL OFL 1.1, the Esquire gamepad font under Apache 2.0 (both in `res/fonts/`).

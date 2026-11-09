@@ -16,6 +16,9 @@
 #define FONT_SIZE       26 /* gfx->font */
 #define FONT_SIZE_SMALL 19 /* gfx->font_small */
 
+/* Button icons (mui/glyphs.h) sized to sit next to font_small hint text. */
+#define GLYPH_SIZE_SMALL 30
+
 /* text */
 static const SDL_Color C_WHITE  = {240, 240, 245, 0};
 static const SDL_Color C_DIM    = {140, 145, 160, 0};
